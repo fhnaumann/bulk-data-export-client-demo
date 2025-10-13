@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { type CalendarRootEmits, type CalendarRootProps, useDateFormatter, useForwardPropsEmits } from 'reka-ui'
 import { computed, type HTMLAttributes, ref, type Ref, watch } from 'vue'
-import { type DateDuration, DateFormatter, DateValue, getLocalTimeZone, today } from '@internationalized/date'
+import { type DateDuration, DateFormatter, getLocalTimeZone, today } from '@internationalized/date'
+import type { DateValue } from '@internationalized/date'
 import { useVModel } from '@vueuse/core'
 import { cn } from '@/lib/utils.ts'
 import { createDecade, createYear, toDate } from 'reka-ui/date'
@@ -28,14 +29,9 @@ const props = withDefaults(defineProps<CalendarRootProps &
     return today(getLocalTimeZone())
   },
   weekdayFormat: "short",
+  disabled: false,
 })
 const emits = defineEmits<CalendarRootEmits>()
-
-const delegatedProps = computed(() => {
-  const { class: _, placeholder: __, ...delegated } = props
-
-  return delegated
-})
 
 const placeholder = useVModel(props, "modelValue", emits, {
   passive: true,
@@ -46,7 +42,9 @@ const dateForCalculations = computed(() => {
   return placeholder.value ?? today(getLocalTimeZone())
 })
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const clearDate = () => {
+  placeholder.value = undefined
+}
 
 const formatter = useDateFormatter("en")
 const df = new DateFormatter("en-US", {dateStyle: 'long'})
@@ -110,106 +108,109 @@ const monthOptions = computed(() => {
 </script>
 
 <template>
-  <Popover>
-    <PopoverTrigger as-child>
-      <Button
-        variant="outline"
-        :class="cn(
+  <div class="flex space-x-2">
+    <Popover>
+      <PopoverTrigger as-child>
+        <Button
+          variant="outline"
+          :disabled="disabled"
+          :class="cn(
           'w-[280px] justify-start text-left font-normal',
           !placeholder && 'text-muted-foreground',
         )"
-      >
-        <CalendarIcon class="mr-2 h-4 w-4" />
-        {{ placeholder ? df.format(placeholder.toDate(getLocalTimeZone())) : "Pick a date" }}
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent class="w-auto p-0 flex flex-col items-center justify-center">
-      <Select
-        class="w-full w-min-3/4"
-        @update:model-value="(v) => {
+        >
+          <CalendarIcon class="mr-2 h-4 w-4" />
+          {{ placeholder ? df.format(placeholder.toDate(getLocalTimeZone())) : "Pick a date" }}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent class="w-auto p-0 flex flex-col items-center justify-center">
+        <Select
+          class="w-full w-min-3/4"
+          @update:model-value="(v) => {
           if (!v) return;
           console.log(v)
           placeholder = today(getLocalTimeZone()).subtract(parseDuration(v as string));
         }"
-      >
-        <SelectTrigger class="w-full mx-4">
-          <SelectValue placeholder="Select" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem v-for="item in items" :key="item.label" :value="item.value">
-            {{ item.label }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-      <CalendarRoot
-        :key="`${dateForCalculations.year}-${dateForCalculations.month}`"
-        v-slot="{ date, grid, weekDays }"
-        v-model="placeholder"
-        v-bind="forwarded"
-        :weekStartsOn=1
-        :isDateDisabled="dateDisabled"
-        :class="cn('rounded-md border p-3', props.class)"
-      >
-        <CalendarHeader>
-          <CalendarHeading class="flex w-full items-center justify-between gap-2">
-            <Select v-model="selectedMonth">
-              <SelectTrigger aria-label="Select month" class="w-[60%]">
-                <SelectValue placeholder="Select month" />
-              </SelectTrigger>
-              <SelectContent class="max-h-[200px]">
-                <SelectItem
-                  v-for="month in monthOptions"
-                  :key="month.toString()" :value="month.month.toString()" :disabled="dateDisabled(month)"
-                >
-                  {{ formatter.custom(toDate(month), { month: 'long' }) }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+        >
+          <SelectTrigger class="w-full mx-4">
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="item in items" :key="item.label" :value="item.value">
+              {{ item.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <CalendarRoot
+          :key="`${dateForCalculations.year}-${dateForCalculations.month}`"
+          v-slot="{ grid, weekDays }"
+          v-model="placeholder"
+          :weekStartsOn=1
+          :isDateDisabled="dateDisabled"
+          :class="cn('rounded-md border p-3', props.class)"
+        >
+          <CalendarHeader>
+            <CalendarHeading class="flex w-full items-center justify-between gap-2">
+              <Select v-model="selectedMonth">
+                <SelectTrigger aria-label="Select month" class="w-[60%]">
+                  <SelectValue placeholder="Select month" />
+                </SelectTrigger>
+                <SelectContent class="max-h-[200px]">
+                  <SelectItem
+                    v-for="month in monthOptions"
+                    :key="month.toString()" :value="month.month.toString()" :disabled="dateDisabled(month)"
+                  >
+                    {{ formatter.custom(toDate(month), { month: 'long' }) }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select v-model="selectedYear">
-              <SelectTrigger aria-label="Select year" class="w-[40%]">
-                <SelectValue placeholder="Select year" />
-              </SelectTrigger>
-              <SelectContent class="max-h-[200px]">
-                <SelectItem
-                  v-for="yearValue in yearOptions"
-                  :key="yearValue.toString()" :value="yearValue.year.toString()"  :disabled="dateDisabled(yearValue)"
-                >
-                  {{ yearValue.year }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </CalendarHeading>
-        </CalendarHeader>
+              <Select v-model="selectedYear">
+                <SelectTrigger aria-label="Select year" class="w-[40%]">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent class="max-h-[200px]">
+                  <SelectItem
+                    v-for="yearValue in yearOptions"
+                    :key="yearValue.toString()" :value="yearValue.year.toString()"  :disabled="dateDisabled(yearValue)"
+                  >
+                    {{ yearValue.year }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </CalendarHeading>
+          </CalendarHeader>
 
-        <div class="flex flex-col space-y-4 pt-4 sm:flex-row sm:gap-x-4 sm:gap-y-0">
-          <CalendarGrid v-for="month in grid" :key="month.value.toString()">
-            <CalendarGridHead>
-              <CalendarGridRow>
-                <CalendarHeadCell
-                  v-for="day in weekDays" :key="day"
-                >
-                  {{ day.substring(0, 1) }}
-                </CalendarHeadCell>
-              </CalendarGridRow>
-            </CalendarGridHead>
-            <CalendarGridBody class="grid">
-              <CalendarGridRow v-for="(weekDates, index) in month.rows" :key="`weekDate-${index}`" class="mt-2 w-full">
-                <CalendarCell
-                  v-for="weekDate in weekDates"
-                  :key="weekDate.toString()"
-                  :date="weekDate"
-                >
-                  <CalendarCellTrigger
-                    :day="weekDate"
-                    :month="month.value"
-                  />
-                </CalendarCell>
-              </CalendarGridRow>
-            </CalendarGridBody>
-          </CalendarGrid>
-        </div>
-      </CalendarRoot>
-    </PopoverContent>
-  </Popover>
+          <div class="flex flex-col space-y-4 pt-4 sm:flex-row sm:gap-x-4 sm:gap-y-0">
+            <CalendarGrid v-for="month in grid" :key="month.value.toString()">
+              <CalendarGridHead>
+                <CalendarGridRow>
+                  <CalendarHeadCell
+                    v-for="day in weekDays" :key="day"
+                  >
+                    {{ day.substring(0, 1) }}
+                  </CalendarHeadCell>
+                </CalendarGridRow>
+              </CalendarGridHead>
+              <CalendarGridBody class="grid">
+                <CalendarGridRow v-for="(weekDates, index) in month.rows" :key="`weekDate-${index}`" class="mt-2 w-full">
+                  <CalendarCell
+                    v-for="weekDate in weekDates"
+                    :key="weekDate.toString()"
+                    :date="weekDate"
+                  >
+                    <CalendarCellTrigger
+                      :day="weekDate"
+                      :month="month.value"
+                    />
+                  </CalendarCell>
+                </CalendarGridRow>
+              </CalendarGridBody>
+            </CalendarGrid>
+          </div>
+        </CalendarRoot>
+      </PopoverContent>
+    </Popover>
+    <Button v-if="modelValue" @click="clearDate" class="hover:cursor-pointer">Clear</Button>
+  </div>
 </template>
