@@ -1,4 +1,5 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useFhirClient } from '@/components/fhirClient.ts'
 
 interface PollResult {
   status: 'in-progress' | 'complete' | 'error'
@@ -23,6 +24,13 @@ interface BulkExportResult {
 }
 
 export function useBulkExportClient() {
+
+  const { client } = useFhirClient()
+
+  const bearerToken = computed(() => {
+    return 'Bearer ' + client.value!.state!.tokenResponse!.access_token!
+  })
+
   const running = ref(false)
   const pollResult = ref<PollResult>()
   const completeResult = ref<BulkExportResult>()
@@ -36,6 +44,7 @@ export function useBulkExportClient() {
       headers: {
         Accept: 'application/fhir+json',
         Prefer: 'respond-async',
+        Authorization: bearerToken.value
       },
     })
 
@@ -61,6 +70,7 @@ export function useBulkExportClient() {
       method: 'GET',
       headers: {
         Accept: 'application/json',
+        Authorization: bearerToken.value
       },
     })
 

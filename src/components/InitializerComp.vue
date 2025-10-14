@@ -19,9 +19,24 @@ const router = useRouter()
 const launchClient = (serverUrl: string) => {
   console.log(serverUrl)
   const routeData = router.resolve({name: 'client'})
+  //router.push({name: 'client'})
   window.open(`${routeData.href}?serverUrl=${serverUrl}`, '_blank')
 
 }
+
+fetch('https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token', {
+  method: 'OPTIONS',
+  headers: {
+    'Origin': 'http://localhost:5173',
+    'Access-Control-Request-Method': 'POST',
+    'Access-Control-Request-Headers': 'content-type'
+  }
+}).then(r => {
+  console.log('CORS preflight status:', r.status)
+  console.log(r.headers)
+  console.log('Allow-Origin:', r.headers.get('Access-Control-Allow-Origin'))
+  console.log('Allow-Methods:', r.headers.get('Access-Control-Allow-Methods'))
+})
 
 </script>
 

@@ -74,52 +74,89 @@ const selectNone = computed({
   }
 })
 
-// Method to handle already-authenticated client
-// async function fetchCapabilities() {
-//   try {
-//     console.log("client 123", client)
-//     const capabilityStatement = await client.value?.request('metadata')
-//     console.log(capabilityStatement)
-//
-//     supportedResources.value = Object.fromEntries(
-//       capabilityStatement.rest[0].resource.map((resource: any) => [resource.type, true])
-//     )
-//
-//     console.log('Supported resource types:', supportedResources.value)
-//   } catch (reason) {
-//     connError.value = reason
-//     console.error('Error fetching metadata:', reason)
-//   }
-// }
+async function fetchCapabilities() {
+  if (!client.value) return
+
+  try {
+    console.log('Client state:', client.value.state)
+    console.log('Token response:', client.value.state.tokenResponse)
+
+    console.log('Access token:', client.value.state.tokenResponse?.access_token)
+    console.log('Token type:', client.value.state.tokenResponse?.token_type)
+
+    // Try fetching metadata
+    const capabilityStatement = await client.value.request('metadata')
+    console.log('Capability statement:', capabilityStatement)
+
+    supportedResources.value = Object.fromEntries(
+      capabilityStatement.rest[0].resource.map((resource: any) => [resource.type, true])
+    )
+  } catch (error) {
+    console.error('Error fetching metadata:', error)
+
+    // Try fetching without auth as a fallback
+    // console.log('Trying to fetch metadata without authentication...')
+    // try {
+    //   const response = await fetch('http://localhost:8080/fhir/metadata')
+    //   const data = await response.json()
+    //   console.log('Metadata without auth:', data)
+    //
+    //   supportedResources.value = Object.fromEntries(
+    //     data.rest[0].resource.map((resource: any) => [resource.type, true])
+    //   )
+    // } catch (fetchError) {
+    //   console.error('Fallback also failed:', fetchError)
+    // }
+  }
+}
 
 const ready = ref(false)
 const error = ref<string>()
-const { setClient } = useFhirClient()
+const { client, setClient } = useFhirClient()
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
-  const serverUrl = params.get('serverUrl')
+  let serverUrl = params.get('serverUrl')
+  console.log("Found:", serverUrl)
+
+  if(serverUrl) {
+    sessionStorage.setItem("fhir-server-url", serverUrl)
+  }
+  else {
+    serverUrl = sessionStorage.getItem("fhir-server-url")
+  }
 
   if (!serverUrl) {
     error.value = 'No server URL provided'
     console.error('No server URL provided')
-    return
+    // return
   }
 
   console.log('Initializing OAuth for server:', serverUrl)
 
+
   try {
+    console.log(window.location.origin)
     const client = await FHIR.oauth2.init({
-      iss: `${serverUrl}/fhir`,
+      // iss: `${serverUrl}/fhir`,
+      iss: "http://localhost:8080/fhir",
       clientId: 'bulk-client',
-      scope: 'openid',
-      redirectUri: window.location.origin + '/client'
+      scope: 'openid profile email user/*.read',
+      redirectUri:  'http://localhost:5173/client'
     })
 
     if (client) {
       console.log('Client authenticated:', client)
+      console.log('Access token:', client.state.tokenResponse?.access_token)
+      console.log('Token type:', client.state.tokenResponse?.token_type)
+      const result = await client.fhirRequest("metadata")
+      console.log(result)
       setClient(client)
       ready.value = true
+
+      //sessionStorage.removeItem('fhir-server-url')
+
+      await fetchCapabilities()
     }
   } catch (err) {
     error.value = 'Authentication failed: ' + (err as Error).message
