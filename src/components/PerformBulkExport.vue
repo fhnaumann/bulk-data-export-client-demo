@@ -24,6 +24,8 @@ const props = defineProps<{
   disabled?: boolean
 }>()
 
+const { downloadFile } = useBulkExportClient()
+
 const getRequest = computed(() => {
   const url = new URL(`${props.baseUrl}/$export`)
   if(props._type && props._type.length > 0) {
@@ -67,28 +69,11 @@ const copyToClipboard = async () => {
 const { running, pollResult, completeResult, errorResult, executeExport } = useBulkExportClient()
 
 const downloadAll = async () => {
-  if (!pollResult.value?.data?.output) return
-
-  const files = pollResult.value.data.output
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i]
-
-    // Create temporary link for each file
-    const link = document.createElement('a')
-    link.href = file.url
-    link.download = `${file.type}.ndjson`
-    link.style.display = 'none'
-
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    // Small delay between downloads to avoid browser blocking
-    if (i < files.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 200))
-    }
-  }
+  await pollResult.value?.data?.output.reduce(async (promise, value) => {
+    await promise;
+    await downloadFile(value.url, `${value.type}.ndjson`);
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }, Promise.resolve());
 }
 
 const displayStatus = computed(() => {
@@ -144,10 +129,12 @@ const displayStatus = computed(() => {
       <CardTitle>Download Bulk Export NDJSON Files</CardTitle>
     </CardHeader>
     <CardContent class="flex flex-col items-center justify-center space-y-4">
-      <div v-if="pollResult.data?.output.length ?? 0 > 0">
-        <Button @click="downloadAll" class="hover:cursor-pointer">
-          Download all {{ pollResult.data?.output.length }} NDJSON files
-        </Button>
+      <div v-if="(pollResult.data?.output.length ?? 0 > 0) && (pollResult.data?.output.length ?? 0 <= 50)" class="w-full">
+        <div class="flex items-center justify-center my-4">
+          <Button @click="downloadAll" class="hover:cursor-pointer">
+            Download all {{ pollResult.data?.output.length }} NDJSON files
+          </Button>
+        </div>
         <Table>
           <TableCaption>NDJSON Files</TableCaption>
           <TableHeader>
@@ -162,10 +149,8 @@ const displayStatus = computed(() => {
               <TableCell>{{ file.type }}</TableCell>
               <TableCell>{{ file.count ?? '-' }}</TableCell>
               <TableCell>
-                <Button as-child variant="link">
-                  <a :href="file.url" :download="file.url">
-                    <DownloadIcon class="w-4 h-4 mr-2" />
-                  </a>
+                <Button class="cursor-pointer" variant="link" @click="downloadFile(file.url, `${file.type}.ndjson`)">
+                  <DownloadIcon class="w-4 h-4 mr-2" />
                 </Button>
               </TableCell>
             </TableRow>

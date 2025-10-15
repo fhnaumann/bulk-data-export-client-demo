@@ -12,7 +12,7 @@ import { useRouter } from 'vue-router'
 
 const serverUrl = ref('http://localhost:8080')
 
-const customOptions = ref(hyperspeedPresets.six)
+const customOptions = ref(hyperspeedPresets.one)
 
 const router = useRouter()
 
@@ -20,23 +20,12 @@ const launchClient = (serverUrl: string) => {
   console.log(serverUrl)
   const routeData = router.resolve({name: 'client'})
   //router.push({name: 'client'})
-  window.open(`${routeData.href}?serverUrl=${serverUrl}`, '_blank')
+  const queryParams = new URLSearchParams({
+    serverUrl: serverUrl
+  })
+  window.open(`${routeData.href}?${queryParams.toString()}`, '_blank')
 
 }
-
-fetch('https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token', {
-  method: 'OPTIONS',
-  headers: {
-    'Origin': 'http://localhost:5173',
-    'Access-Control-Request-Method': 'POST',
-    'Access-Control-Request-Headers': 'content-type'
-  }
-}).then(r => {
-  console.log('CORS preflight status:', r.status)
-  console.log(r.headers)
-  console.log('Allow-Origin:', r.headers.get('Access-Control-Allow-Origin'))
-  console.log('Allow-Methods:', r.headers.get('Access-Control-Allow-Methods'))
-})
 
 </script>
 
@@ -48,8 +37,8 @@ fetch('https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connec
     <!--div class="absolute inset-0 flex items-center justify-center hyperspeed-container">
       <HyperSpeed :effect-options="customOptions" />
     </div-->
-    <div class="relative z-10 flex items-center justify-center min-h-screen mx-4 drop-shadow-xl">
-      <Card class="w-[600px] h-auto p-8">
+    <div class="relative z-10 flex items-center justify-center min-h-screen mx-4 drop-shadow-xl pointer-events-none">
+      <Card class="w-[600px] h-auto p-8 pointer-events-auto">
         <CardHeader>Pathling FHIR Server Demo Client</CardHeader>
         <CardContent>
           <div class="flex flex-col space-y-4">

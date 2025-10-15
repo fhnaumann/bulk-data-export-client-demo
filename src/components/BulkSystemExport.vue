@@ -93,25 +93,10 @@ async function fetchCapabilities() {
     )
   } catch (error) {
     console.error('Error fetching metadata:', error)
-
-    // Try fetching without auth as a fallback
-    // console.log('Trying to fetch metadata without authentication...')
-    // try {
-    //   const response = await fetch('http://localhost:8080/fhir/metadata')
-    //   const data = await response.json()
-    //   console.log('Metadata without auth:', data)
-    //
-    //   supportedResources.value = Object.fromEntries(
-    //     data.rest[0].resource.map((resource: any) => [resource.type, true])
-    //   )
-    // } catch (fetchError) {
-    //   console.error('Fallback also failed:', fetchError)
-    // }
   }
 }
 
 const ready = ref(false)
-const error = ref<string>()
 const { client, setClient } = useFhirClient()
 
 onMounted(async () => {
@@ -127,7 +112,7 @@ onMounted(async () => {
   }
 
   if (!serverUrl) {
-    error.value = 'No server URL provided'
+    connError.value = 'No server URL provided'
     console.error('No server URL provided')
     // return
   }
@@ -137,29 +122,26 @@ onMounted(async () => {
 
   try {
     console.log(window.location.origin)
+    console.log(serverUrl)
     const client = await FHIR.oauth2.init({
-      // iss: `${serverUrl}/fhir`,
-      iss: "http://localhost:8080/fhir",
+      iss: `${serverUrl}/fhir`,
+      //iss: "http://localhost:8080/fhir",
       clientId: 'bulk-client',
       scope: 'openid profile email user/*.read',
-      redirectUri:  'http://localhost:5173/client'
+      redirectUri:  `${window.location.origin}/client`
     })
 
     if (client) {
       console.log('Client authenticated:', client)
-      console.log('Access token:', client.state.tokenResponse?.access_token)
-      console.log('Token type:', client.state.tokenResponse?.token_type)
       const result = await client.fhirRequest("metadata")
       console.log(result)
       setClient(client)
       ready.value = true
 
-      //sessionStorage.removeItem('fhir-server-url')
-
       await fetchCapabilities()
     }
   } catch (err) {
-    error.value = 'Authentication failed: ' + (err as Error).message
+    connError.value = 'Authentication failed: ' + (err as Error).message
     console.error('Authentication failed:', err)
   }
 })

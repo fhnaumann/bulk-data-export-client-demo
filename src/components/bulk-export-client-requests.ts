@@ -113,9 +113,8 @@ export function useBulkExportClient() {
     // wait 1s
     await sleep(1000)
 
-    // Poll with exponential backoff
     let attempt = 0
-    let delay = 1000 // Start with 1 second
+    const delay = 1000
 
     while (attempt < maxAttempts) {
       await sleep(delay)
@@ -144,5 +143,27 @@ export function useBulkExportClient() {
     throw new Error('Export timed out after maximum polling attempts')
   }
 
-  return { running, pollResult, completeResult, errorResult, executeExport }
+  async function downloadFile(fileUrl: string, fileName: string) {
+    try {
+      const response = await fetch(fileUrl, {
+        headers: {
+          'Authorization': bearerToken.value
+        }
+      });
+
+      if (!response.ok) throw new Error('Download failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+    }
+  }
+
+  return { running, pollResult, completeResult, errorResult, executeExport, downloadFile }
 }
