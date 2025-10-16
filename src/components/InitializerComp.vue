@@ -23,7 +23,9 @@ const launchClient = (serverUrl: string) => {
   const queryParams = new URLSearchParams({
     serverUrl: serverUrl
   })
-  window.open(`${routeData.href}?${queryParams.toString()}`, '_blank')
+  router.push("/client")
+  // window.open(`${routeData.href}?${queryParams.toString()}`, '_blank')
+  window.open(`${routeData.href}?${queryParams.toString()}`, '_self')
 
 }
 

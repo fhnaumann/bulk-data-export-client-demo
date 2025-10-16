@@ -5,8 +5,7 @@ import InitializerComp from '@/components/InitializerComp.vue'
 import Test from '@/views/Test.vue'
 
 const routes = [
-  { path: '/', component: InitializerComp },
-  { path: '/client', name: 'client', component: BulkSystemExport},
+  { path: '/', component: BulkSystemExport }
 ]
 
 const router = createRouter({

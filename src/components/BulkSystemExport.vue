@@ -30,8 +30,6 @@ const supportedResourceListForExport = computed(() => {
   if(selected.length === Object.keys(supportedResources.value).length) {
     return []
   }
-  console.log(selected)
-  console.log(selected.filter(value => value !== undefined))
   return selected.filter(value => value !== undefined)
 })
 const _elements = ref("")
@@ -65,7 +63,6 @@ const noneSelected = computed(() => {
 const selectNone = computed({
   get: () => noneSelected.value,
   set: (value: boolean) => {
-    console.log("new", value)
     if (supportedResources.value) {
       Object.keys(supportedResources.value).forEach(key => {
         supportedResources.value![key] = false
@@ -99,36 +96,26 @@ async function fetchCapabilities() {
 const ready = ref(false)
 const { client, setClient } = useFhirClient()
 
+const serverUrl = ref(import.meta.env.VITE_BACKEND_URL)
+
 onMounted(async () => {
-  const params = new URLSearchParams(window.location.search)
-  let serverUrl = params.get('serverUrl')
-  console.log("Found:", serverUrl)
+  console.log("Found:", serverUrl.value)
 
-  if(serverUrl) {
-    sessionStorage.setItem("fhir-server-url", serverUrl)
-  }
-  else {
-    serverUrl = sessionStorage.getItem("fhir-server-url")
-  }
-
-  if (!serverUrl) {
+  if (!serverUrl.value) {
     connError.value = 'No server URL provided'
     console.error('No server URL provided')
     // return
   }
 
-  console.log('Initializing OAuth for server:', serverUrl)
+  console.log('Initializing OAuth for server:', serverUrl.value)
 
 
   try {
-    console.log(window.location.origin)
-    console.log(serverUrl)
     const client = await FHIR.oauth2.init({
-      iss: `${serverUrl}/fhir`,
-      //iss: "http://localhost:8080/fhir",
+      iss: `${serverUrl.value}`,
       clientId: 'bulk-client',
       scope: 'openid profile email user/*.read',
-      redirectUri:  `${window.location.origin}/client`
+      redirectUri: `${import.meta.env.BASE_URL}`
     })
 
     if (client) {
@@ -234,6 +221,6 @@ onMounted(async () => {
         </div>
       </CardContent>
     </Card>
-    <PerformBulkExport base-url="http://localhost:8080/fhir" :_type="supportedResourceListForExport" :_elements="_elements" :_since="_since" :_until="_until" :lenient="lenient" :disabled="connError !== undefined"/>
+    <PerformBulkExport :base-url="serverUrl" :_type="supportedResourceListForExport" :_elements="_elements" :_since="_since" :_until="_until" :lenient="lenient" :disabled="connError !== undefined"/>
   </div>
 </template>
