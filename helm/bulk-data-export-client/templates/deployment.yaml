@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-deployment
+  labels:
+    app: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.bulkDataExportClient.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: bulk-data-export-client
+        image: {{ .Values.bulkDataExportClient.image | quote }}
+        imagePullPolicy: {{ .Values.bulkDataExportClient.imagePullPolicy | quote }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.bulkDataExportClient.service.targetPort }}
+          protocol: TCP
+        {{- if .Values.bulkDataExportClient.healthCheck.enabled }}
+        startupProbe:
+          httpGet:
+            path: {{ .Values.bulkDataExportClient.healthCheck.path | quote }}
+            port: http
+          initialDelaySeconds: {{ .Values.bulkDataExportClient.healthCheck.initialDelaySeconds }}
+          periodSeconds: {{ .Values.bulkDataExportClient.healthCheck.periodSeconds }}
+          timeoutSeconds: {{ .Values.bulkDataExportClient.healthCheck.timeoutSeconds }}
+          failureThreshold: {{ .Values.bulkDataExportClient.healthCheck.failureThreshold }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.bulkDataExportClient.healthCheck.path | quote }}
+            port: http
+          periodSeconds: 30
+          timeoutSeconds: {{ .Values.bulkDataExportClient.healthCheck.timeoutSeconds }}
+          failureThreshold: {{ .Values.bulkDataExportClient.healthCheck.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.bulkDataExportClient.healthCheck.path | quote }}
+            port: http
+          periodSeconds: {{ .Values.bulkDataExportClient.healthCheck.periodSeconds }}
+          timeoutSeconds: {{ .Values.bulkDataExportClient.healthCheck.timeoutSeconds }}
+          failureThreshold: {{ .Values.bulkDataExportClient.healthCheck.failureThreshold }}
+        {{- end }}
+        resources: {{ toJson .Values.bulkDataExportClient.resources }}
+      nodeSelector: {{ toJson .Values.bulkDataExportClient.nodeSelector }}
+      tolerations: {{ toJson .Values.bulkDataExportClient.tolerations }}
+      affinity: {{ toJson .Values.bulkDataExportClient.affinity }}
